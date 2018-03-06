@@ -9,31 +9,38 @@ using dm = SertifiTest.Models.Domain;
 
 namespace SertifiTest.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     public class StudentController : Controller
     {
-        //TODO: Could set the students as a private variable here, or cache them if they are going to be unchanging
+        //TODO: Could implement some sort of caching here
         private static List<dm.Student> _students;
 
-
-        // GET api/student
-        [HttpGet]
-        public List<dm.Student> Get()
+        // PUT api/student/PutStudentAggregate
+        [HttpPut]
+        public ActionResult PutStudentAggregate()
         {
-            //StudentRepository repo = new StudentRepository();
             _students = StudentRepository.GetStudents().Result;
 
-            int YearWithHighestAttendance = FindYearWithHighestAttendance();
+            dm.StudentAggregate studentAggregate = new dm.StudentAggregate
+            {
+                YourName = "Kevin Macek", //Obviously we would never hard code this in real life
+                YourEmail = "macekkevin@gmail.com", //Obviously we would never hard code this in real life
+                YearWithHighestAttendance = FindYearWithHighestAttendance(),
+                YearWithHighestOverallGpa = FindYearWithHighestOverallGpa(),
+                Top10StudentIdsWithHighestGpa = FindTop10StudentIdsWithHighestGpa(),
+                StudentIdMostInconsistent = FindStudentIdMostInconsistent()
+            };
 
-            double YearWithHighestOverallGPA = FindYearWithHighestOverallGpa();
+            //Do this since we may want to make the user aware it failed on the frontend
+            if (!StudentRepository.PutStudentAggregate(studentAggregate))
+            {
+                return BadRequest();
+            }
 
-            List<int> Top10StudentIdsWithHighestGpa = FindTop10StudentIdsWithHighestGpa();
-
-            int StudentIdMostInconsistent = FindStudentIdMostInconsistent();
-
-            return _students;
+            return Ok();
         }
 
+        //TODO: Move all of this to a domain level class to perform business logic, here for simplicity
         private static int FindYearWithHighestAttendance()
         {
             var grouped = _students.SelectMany(g => g.YearlyGrades)
@@ -47,14 +54,14 @@ namespace SertifiTest.Controllers
             return highestYears.Min(x => x);
         }
 
-        private static double FindYearWithHighestOverallGpa()
+        private static int FindYearWithHighestOverallGpa()
         {
             return _students.SelectMany(g => g.YearlyGrades)
                                   .GroupBy(g => g.Year)
                                   .Select(x => new { Year = x.Key, GpaAverage = x.Average(i => i.GPA) })
                                   .OrderByDescending(x => x.GpaAverage)
-                                  .Select(x => x.Year)
-                                  .FirstOrDefault();
+                                  .FirstOrDefault()
+                                  .Year;
         }
 
         private static List<int> FindTop10StudentIdsWithHighestGpa() 

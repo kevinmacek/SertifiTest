@@ -10,7 +10,7 @@ namespace SertifiTest
     {
         public MappingProfile()
         {
-            //Ignore the YearlyGrades list we generate on the fly
+            //Ignore the YearlyGrades list, we construct this in the setter
             CreateMap<dto.Student, dm.Student>().ForMember(dest => dest.YearlyGrades, src => src.Ignore());
         }
     }
